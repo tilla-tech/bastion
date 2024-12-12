@@ -31,6 +31,23 @@ $KEYS
     AUTHORIZED_KEYS="${AUTHORIZED_KEYS}${keys_block}"
   done
 
+  # Fetch keys from AWS Secrets Manager
+  if [ -n "$AWS_SECRET_ARN" ]; then
+    echo "Fetching SSH keys from AWS Secrets Manager..."
+    local AWS_KEYS=$(aws secretsmanager get-secret-value --secret-id "$AWS_SECRET_ARN" --query SecretString --output text)
+    if [ $? -eq 0 ]; then
+      echo "Successfully fetched keys from AWS Secrets Manager."
+      local aws_comment="# keys from AWS Secrets Manager"
+      local aws_keys_block="$aws_comment
+$AWS_KEYS
+
+"
+      AUTHORIZED_KEYS="${AUTHORIZED_KEYS}${aws_keys_block}"
+    else
+      echo "Failed to fetch keys from AWS Secrets Manager. Proceeding without these keys."
+    fi
+  fi
+
   echo "$AUTHORIZED_KEYS" > ~/.ssh/authorized_keys
   echo "...initializing of SSH keys complete."
 }
